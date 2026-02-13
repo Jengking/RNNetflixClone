@@ -1,98 +1,104 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { movieApi } from "@/api/endpoints";
+import HeroSection from "@/components/HeroSection";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Movie } from "@/types/movie";
+import React, { useEffect, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import MovieRow from "../../components/MovieRow";
+import { COLORS, SPACING } from "../../constants/theme";
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
+  const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
+  const [topRatedMovies, setTopRatedMovies] = useState<Movie[]>([]);
+  const [nowPlayingMovies, setNowPlayingMovies] = useState<Movie[]>([]);
+  const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useEffect(() => {
+    loadMovies();
+  }, []);
+
+  const loadMovies = async () => {
+    try {
+      const [trending, popular, topRated, nowPlaying, upcoming] =
+        await Promise.all([
+          movieApi.getTrending("day"),
+          movieApi.getPopular(),
+          movieApi.getTopRated(),
+          movieApi.getNowPlaying(),
+          movieApi.getUpcoming(),
+        ]);
+
+      if (trending.success && trending.data) {
+        setTrendingMovies(trending.data.results);
+      }
+      if (popular.success && popular.data) {
+        setPopularMovies(popular.data.results);
+      }
+      if (topRated.success && topRated.data) {
+        setTopRatedMovies(topRated.data.results);
+      }
+      if (nowPlaying.success && nowPlaying.data) {
+        setNowPlayingMovies(nowPlaying.data.results);
+      }
+      if (upcoming.success && upcoming.data) {
+        setUpcomingMovies(upcoming.data.results);
+      }
+    } catch (error) {
+      console.error("Error Loading Movies:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadMovies();
+    setRefreshing(false);
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
+      {trendingMovies.length > 0 && <HeroSection movie={trendingMovies[0]} />}
+
+      <View style={styles.content}>
+        {trendingMovies.length > 0 && (
+          <MovieRow title="Trending Now" movies={trendingMovies} />
+        )}
+        {popularMovies.length > 0 && (
+          <MovieRow title="Popular on Netflix" movies={popularMovies} />
+        )}
+        {topRatedMovies.length > 0 && (
+          <MovieRow title="Top Rated" movies={topRatedMovies} />
+        )}
+        {nowPlayingMovies.length > 0 && (
+          <MovieRow title="Now Playing" movies={nowPlayingMovies} />
+        )}
+        {upcomingMovies.length > 0 && (
+          <MovieRow title="Coming Soon" movies={upcomingMovies} />
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.BACKGROUND,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  content: {
+    paddingBottom: SPACING.XL,
   },
 });
