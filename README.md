@@ -407,8 +407,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Your Name**
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your Name](https://linkedin.com/in/yourname)
+- GitHub: [@Jengking](https://github.com/Jengking)
+- LinkedIn: [Fadzley Hud]([https://linkedin.com/in/yourname](https://www.linkedin.com/in/mohd-fadzley-hud-abd-halim-18827341/))
 
 ---
 
