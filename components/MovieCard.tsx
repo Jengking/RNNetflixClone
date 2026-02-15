@@ -1,7 +1,8 @@
 import { getImageUrl, IMAGE_SIZES } from "@/api/config";
 import { Movie } from "@/types/movie";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -11,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING } from "../constants/theme";
+import { watchlistManager } from "../utils/watchlist";
 
 interface MovieCardProps {
   movie: Movie;
@@ -29,6 +31,19 @@ export default function MovieCard({
 }: MovieCardProps) {
   const router = useRouter();
   const imageUrl = getImageUrl(movie.poster_path, IMAGE_SIZES.POSTER.MEDIUM);
+  //Track if in watchlist
+  const [inWatchlist, setInWatchlist] = useState(false);
+
+  // Check watchlist status on mount
+  useEffect(() => {
+    checkWatchlist();
+  }, [movie.id]);
+
+  // Function to check if movie is in watchlist
+  const checkWatchlist = async () => {
+    const isInList = await watchlistManager.isInWatchlist(movie.id);
+    setInWatchlist(isInList);
+  };
 
   const handlePress = () => {
     router.push(`/movie/${movie.id}`);
@@ -58,6 +73,13 @@ export default function MovieCard({
             ⭐ {movie.vote_average.toFixed(1)}
           </Text>
         </View>
+
+        {/* Watchlist indicator */}
+        {inWatchlist && (
+          <View style={styles.watchlistBadge}>
+            <Ionicons name="bookmark" size={16} color={COLORS.PRIMARY} />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -101,5 +123,10 @@ const styles = StyleSheet.create({
     color: COLORS.TEXT_PRIMARY,
     fontSize: FONT_SIZES.XS,
     fontWeight: "600",
+  },
+  watchlistBadge: {
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    padding: 4,
+    borderRadius: BORDER_RADIUS.SM,
   },
 });

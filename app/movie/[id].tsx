@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Dimensions,
   FlatList,
   ImageBackground,
@@ -25,7 +26,9 @@ import {
   FONT_SIZES,
   SPACING,
 } from "../../constants/theme";
+import { useWatchlist } from "../../hooks/useWatchlist";
 import { Cast, MovieDetails, Video } from "../../types/movie";
+import { WatchlistItem } from "../../utils/watchlist";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -43,6 +46,13 @@ export default function MovieDetailScreen() {
   useEffect(() => {
     loadMovieDetails();
   }, [id]);
+
+  // Check if movie is in watchlist when movie loads
+  useEffect(() => {
+    if (movie) {
+      checkWatchlistStatus();
+    }
+  }, [movie]);
 
   const loadMovieDetails = async () => {
     try {
@@ -93,6 +103,10 @@ export default function MovieDetailScreen() {
     }).format(amount);
   };
 
+  // Watchlist hook
+  const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const [inList, setInList] = useState(false);
+
   if (loading || !movie) {
     return <LoadingSpinner />;
   }
@@ -104,6 +118,39 @@ export default function MovieDetailScreen() {
   const posterUrl = getImageUrl(movie.poster_path, IMAGE_SIZES.POSTER.LARGE);
   const trailer = videos.find((v) => v.type === "Trailer") || videos[0];
   const director = cast.find((c) => c.character === "Director");
+
+  // Function to check watchlist status
+  const checkWatchlistStatus = async () => {
+    if (movie) {
+      const status = isInWatchlist(movie.id);
+      setInList(status);
+    }
+  };
+
+  // Function to handle add/remove from list
+  const handleToggleWatchlist = async () => {
+    if (!movie) return;
+
+    const watchlistItem: WatchlistItem = {
+      id: movie.id,
+      title: movie.title,
+      poster_path: movie.poster_path,
+      vote_average: movie.vote_average,
+      addedAt: Date.now(),
+    };
+
+    const success = await toggleWatchlist(watchlistItem);
+    if (success) {
+      setInList(!inList);
+      // Optional: Show a toast/alert
+      Alert.alert(
+        inList ? "Removed from My List" : "Added to My List",
+        inList
+          ? `${movie.title} has been removed from your list`
+          : `${movie.title} has been added to your list`,
+      );
+    }
+  };
 
   return (
     <>
@@ -185,9 +232,18 @@ export default function MovieDetailScreen() {
           )}
 
           {/*My List button (placeholder for now) */}
-          <TouchableOpacity style={styles.listButton}>
-            <Ionicons name="add" size={24} color={COLORS.TEXT_PRIMARY} />
-            <Text style={styles.listButtonText}>My List</Text>
+          <TouchableOpacity
+            style={styles.listButton}
+            onPress={handleToggleWatchlist}
+          >
+            <Ionicons
+              name={inList ? "checkmark" : "add"} // Change icon based on status
+              size={24}
+              color={COLORS.TEXT_PRIMARY}
+            />
+            <Text style={styles.listButtonText}>
+              {inList ? "In My List" : "My List"} {/*Change text */}
+            </Text>
           </TouchableOpacity>
 
           {/*Share button */}
